@@ -1,0 +1,7 @@
+instance/
+*.sqlite
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+test-results/

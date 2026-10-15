@@ -1,0 +1,248 @@
+{
+  "info": {
+    "name": "Translation Review Tracker",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5000"
+    },
+    {
+      "key": "segmentId",
+      "value": ""
+    },
+    {
+      "key": "issueId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create segment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/segments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "segments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"episode\": \"EP09\",\n  \"line_ref\": \"001\",\n  \"source_zh\": \"他说他五分钟后就到。\",\n  \"translation\": \"He said he will arrive after 15 minutes.\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));",
+              "pm.collectionVariables.set(\"segmentId\", pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create issue",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/segments/{{segmentId}}/issues",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "segments",
+            "{{segmentId}}",
+            "issues"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"issue_type\": \"number_mismatch\",\n  \"severity\": \"high\",\n  \"note\": \"五分钟 became 15 minutes\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));",
+              "pm.collectionVariables.set(\"issueId\", pm.response.json().id);",
+              "pm.test(\"issue starts open\", () => pm.expect(pm.response.json().status).to.eql(\"open\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List open high-severity issues",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/issues?status=open&severity=high",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "issues"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "open"
+            },
+            {
+              "key": "severity",
+              "value": "high"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resolve issue",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/issues/{{issueId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "issues",
+            "{{issueId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"resolved\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/stats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "stats"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is expected\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

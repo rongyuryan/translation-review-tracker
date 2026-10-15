@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Translation Review Tracker</title>
+<style>
+  :root { --line: #d9dde3; --muted: #5b6470; --high: #b42318; --medium: #b54708; --low: #475467; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; color: #1d2433; background: #f7f8fa; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
+  .stat b { display: block; font-size: 22px; }
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; align-items: end; }
+  label { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+  input, select { width: 100%; min-width: 0; }
+  td:first-child { white-space: nowrap; }
+  input, select, button { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  button { background: #1d4ed8; color: #fff; border: 0; cursor: pointer; }
+  button.secondary { background: #fff; color: #1d2433; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); border-top: 0; }
+  .sev { font-weight: 600; text-transform: uppercase; font-size: 12px; }
+  .sev.high { color: var(--high); } .sev.medium { color: var(--medium); } .sev.low { color: var(--low); }
+  .resolved td { color: var(--muted); text-decoration: line-through; }
+  .filters select { width: auto; }
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  #message { min-height: 1.5em; color: var(--high); }
+  @media (max-width: 640px) { td:nth-child(3), th:nth-child(3) { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Translation Review Tracker</h1>
+  <p class="lead">Log problems found in translated dialogue, filter by severity, and mark them resolved.</p>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat">Open<b id="stat-open">0</b></div>
+    <div class="stat">High severity open<b id="stat-high">0</b></div>
+    <div class="stat">Resolved<b id="stat-resolved">0</b></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="font-size:16px;margin:0 0 12px">Log an issue</h2>
+    <form id="issue-form">
+      <label>Episode <input name="episode" required placeholder="EP01"></label>
+      <label>Line <input name="line_ref" required placeholder="014"></label>
+      <label>Chinese source <input name="source_zh" required></label>
+      <label>English translation <input name="translation"></label>
+      <label>Issue type <input name="issue_type" required placeholder="tone"></label>
+      <label>Severity
+        <select name="severity"><option>low</option><option selected>medium</option><option>high</option></select>
+      </label>
+      <label>Note <input name="note"></label>
+      <button type="submit">Add issue</button>
+    </form>
+    <p id="message" role="status"></p>
+  </section>
+
+  <section class="panel">
+    <div class="filters">
+      <select id="filter-status" aria-label="Status filter">
+        <option value="">All statuses</option><option value="open" selected>Open</option><option value="resolved">Resolved</option>
+      </select>
+      <select id="filter-severity" aria-label="Severity filter">
+        <option value="">All severities</option><option>high</option><option>medium</option><option>low</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Line</th><th>Severity</th><th>Translation</th><th>Issue</th><th></th></tr></thead>
+      <tbody id="issues"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function api(path, options = {}) {
+  const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+  if (response.status === 204) return null;
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || response.statusText);
+  return data;
+}
+
+function cell(text) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  return td;
+}
+
+async function refresh() {
+  const params = new URLSearchParams();
+  if ($("filter-status").value) params.set("status", $("filter-status").value);
+  if ($("filter-severity").value) params.set("severity", $("filter-severity").value);
+  const [issues, stats] = await Promise.all([api(`/api/issues?${params}`), api("/api/stats")]);
+
+  $("stat-open").textContent = stats.open;
+  $("stat-high").textContent = stats.open_by_severity.high;
+  $("stat-resolved").textContent = stats.resolved;
+
+  const body = $("issues");
+  body.replaceChildren();
+  for (const issue of issues) {
+    const tr = document.createElement("tr");
+    tr.dataset.issueId = issue.id;
+    if (issue.status === "resolved") tr.className = "resolved";
+    tr.append(cell(`${issue.episode}-${issue.line_ref}`));
+    const sev = cell(issue.severity);
+    sev.className = `sev ${issue.severity}`;
+    tr.append(sev, cell(issue.translation || "(empty)"), cell(`${issue.issue_type}${issue.note ? ": " + issue.note : ""}`));
+    const action = document.createElement("td");
+    const button = document.createElement("button");
+    button.className = "secondary";
+    button.textContent = issue.status === "open" ? "Resolve" : "Reopen";
+    button.addEventListener("click", async () => {
+      await api(`/api/issues/${issue.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: issue.status === "open" ? "resolved" : "open" }),
+      });
+      refresh();
+    });
+    action.append(button);
+    tr.append(action);
+    body.append(tr);
+  }
+}
+
+async function findOrCreateSegment(form) {
+  const segments = await api(`/api/segments?episode=${encodeURIComponent(form.episode)}`);
+  const existing = segments.find((s) => s.line_ref === form.line_ref);
+  if (existing) return existing;
+  return api("/api/segments", {
+    method: "POST",
+    body: JSON.stringify({
+      episode: form.episode, line_ref: form.line_ref, source_zh: form.source_zh, translation: form.translation,
+    }),
+  });
+}
+
+$("issue-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = Object.fromEntries(new FormData(event.target));
+  try {
+    const segment = await findOrCreateSegment(form);
+    await api(`/api/segments/${segment.id}/issues`, {
+      method: "POST",
+      body: JSON.stringify({ issue_type: form.issue_type, severity: form.severity, note: form.note }),
+    });
+    $("message").textContent = "";
+    event.target.reset();
+    refresh();
+  } catch (error) {
+    $("message").textContent = error.message;
+  }
+});
+
+$("filter-status").addEventListener("change", refresh);
+$("filter-severity").addEventListener("change", refresh);
+refresh();
+</script>
+</body>
+</html>

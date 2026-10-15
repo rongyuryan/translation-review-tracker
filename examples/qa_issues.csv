@@ -1,0 +1,8 @@
+﻿row_number,record_id,issue_type,severity,message,source_text,translation_text
+3,EP01-002,chinese_residual,high,Translation still contains Chinese characters: 您的,您的订单已经确认。,您的 order has been confirmed.
+4,EP01-003,glossary_mismatch,medium,"Source contains ""退款"" but translation does not contain required term ""refund"".",我们会在三个工作日内处理退款。,We will give your money back within three business days.
+6,EP01-005,duplicate_translation,medium,"Translation duplicates record ""EP01-004"" after normalization.",我保证不会再迟到了。,"Don't worry, everything will be fine!"
+7,EP01-006,terminal_punctuation,low,Source is a question but the translation does not end with a question mark.,你为什么还没有回复？,Why haven't you replied
+8,EP01-007,repeated_word,medium,Possible accidental repeated word sequence: is is,这件事真的很重要。,This is is really important.
+9,EP01-008,unbalanced_punctuation,medium,Unbalanced ().,请立即联系客户服务。,Please contact customer support (immediately.
+10,EP01-009,missing_translation,high,English translation is empty.,包裹已经送达。,
